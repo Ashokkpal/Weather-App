@@ -7,17 +7,21 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+    <div class="background-image"></div>
+    
     <div class="container">
         <h1>Weather App</h1>
         
         <div class="search-container">
-            <input type="text" id="location-input" placeholder="Enter city name">
+            <input type="text" id="location-input" placeholder="Enter city name" list="city-list">
+            <datalist id="city-list"></datalist>
             <button id="search-btn">Search</button>
         </div>
         
         <div class="unit-toggle">
             <button id="celsius-btn" class="active">°C</button>
             <button id="fahrenheit-btn">°F</button>
+            <button id="music-toggle">🔇</button>
         </div>
         
         <div id="weather-info" class="weather-info">

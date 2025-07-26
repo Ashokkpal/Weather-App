@@ -1,64 +1,55 @@
 let currentUnit = 'c';
-let musicPlaying = false;
 let bgMusic;
-const weatherImages = {
-    sunny: 'https://images.unsplash.com/photo-1560258018-c7db7645254e',
-    rainy: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0',
-    snowy: 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5',
-    default: 'https://images.unsplash.com/photo-1601134467661-3d775b999c8b'
+const popularCities = [
+    "Kolkata", "New York", "London", "Tokyo", "Paris", "Berlin",
+    "Sydney", "Moscow", "Dubai", "Singapore", "Toronto",
+    "Chicago", "Los Angeles", "Beijing", "Hong Kong", "Seoul",
+    "Bangkok", "Mumbai", "Rome", "Madrid", "Amsterdam"
+];
+
+// Weather-specific music
+const weatherMusic = {
+    sunny: 'https://assets.mixkit.co/music/preview/mixkit-summer-beach-party-1290.mp3',
+    rainy: 'https://assets.mixkit.co/music/preview/mixkit-rainy-day-1168.mp3',
+    snowy: 'https://assets.mixkit.co/music/preview/mixkit-winter-snow-1293.mp3',
+    default: 'https://assets.mixkit.co/music/preview/mixkit-relaxing-guitar-melody-1240.mp3'
 };
 
-// Initialize city list
-async function initCityList() {
-    try {
-        const response = await fetch('/cities');
-        const cities = await response.json();
-        const datalist = document.getElementById('city-list');
-        
-        datalist.innerHTML = '';
-        cities.forEach(city => {
-            const option = document.createElement('option');
-            option.value = city;
-            datalist.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Failed to load city list:', error);
-    }
-}
-
-// Music control
-function toggleMusic() {
-    if (!bgMusic) {
-        bgMusic = new Audio('https://assets.mixkit.co/music/preview/mixkit-forest-flow-1507.mp3');
-        bgMusic.loop = true;
-        bgMusic.volume = 0.3;
-    }
+// Display cities as clickable buttons
+function displayCities() {
+    const citiesContainer = document.createElement('div');
+    citiesContainer.className = 'cities-container';
     
-    musicPlaying = !musicPlaying;
-    const musicBtn = document.getElementById('music-toggle');
+    // Add heading
+    const heading = document.createElement('h3');
+    heading.textContent = 'Popular Cities:';
+    citiesContainer.appendChild(heading);
     
-    if (musicPlaying) {
-        bgMusic.play().catch(e => {
-            console.log("Playback prevented:", e);
-            musicPlaying = false;
-            musicBtn.textContent = '🔇';
+    // Add city buttons
+    const citiesList = document.createElement('div');
+    citiesList.className = 'cities-list';
+    
+    popularCities.forEach(city => {
+        const cityBtn = document.createElement('button');
+        cityBtn.className = 'city-btn';
+        cityBtn.textContent = city;
+        cityBtn.addEventListener('click', () => {
+            document.getElementById('location-input').value = city;
+            fetchWeather();
         });
-        musicBtn.textContent = '🔊';
-    } else {
-        bgMusic.pause();
-        musicBtn.textContent = '🔇';
-    }
-}
-
-// Update background based on weather
-function updateBackground(weatherType) {
-    const bg = document.querySelector('.background-image');
-    bg.style.backgroundImage = `url(${weatherImages[weatherType]})`;
+        citiesList.appendChild(cityBtn);
+    });
+    
+    citiesContainer.appendChild(citiesList);
+    document.querySelector('.container').insertBefore(
+        citiesContainer,
+        document.querySelector('.weather-info')
+    );
 }
 
 // Initialize app
 window.addEventListener('DOMContentLoaded', () => {
-    initCityList();
+    displayCities();
     
     // Event listeners
     document.getElementById('search-btn').addEventListener('click', fetchWeather);
@@ -80,24 +71,58 @@ window.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('location-input').value) fetchWeather();
     });
     
-    document.getElementById('music-toggle').addEventListener('click', toggleMusic);
-    
     // Enable music after first interaction
-    document.body.addEventListener('click', () => {
-        if (musicPlaying && bgMusic) {
-            bgMusic.play().catch(e => console.log("Autoplay prevented:", e));
-        }
-    }, { once: true });
+    document.body.addEventListener('click', initMusic, { once: true });
 });
 
-// Fetch weather data
+// Music control
+function initMusic() {
+    const musicIndicator = document.getElementById('music-indicator');
+    musicIndicator.style.display = 'flex';
+    
+    musicIndicator.addEventListener('click', () => {
+        if (bgMusic) {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicIndicator.textContent = '♪';
+            } else {
+                bgMusic.pause();
+                musicIndicator.textContent = '🔇';
+            }
+        }
+    });
+}
+
+function playWeatherMusic(weatherType) {
+    if (bgMusic) {
+        bgMusic.pause();
+    }
+    
+    bgMusic = new Audio(weatherMusic[weatherType]);
+    bgMusic.loop = true;
+    bgMusic.volume = 0.3;
+    
+    // Try to autoplay (works after user interaction)
+    const playPromise = bgMusic.play();
+    
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            console.log('Autoplay prevented - will play after user interaction');
+        });
+    }
+}
+
+// Fetch and display weather
 async function fetchWeather() {
     const location = document.getElementById('location-input').value.trim();
+    const weatherInfo = document.getElementById('weather-info');
     
     if (!location) {
         showError('Please enter a location');
         return;
     }
+    
+    weatherInfo.innerHTML = '<div class="loading">Loading weather...</div>';
     
     try {
         const response = await fetch(`/weather?location=${encodeURIComponent(location)}&unit=${currentUnit}`);
@@ -114,13 +139,13 @@ async function fetchWeather() {
     }
 }
 
-// Display weather
 function displayWeather(data) {
     const weatherInfo = document.getElementById('weather-info');
     const location = data.location;
     const current = data.current;
     
-    updateBackground(current.weatherType);
+    // Play weather-appropriate music
+    playWeatherMusic(current.weatherType);
     
     weatherInfo.innerHTML = `
         <div class="location">${location.name}, ${location.country}</div>
